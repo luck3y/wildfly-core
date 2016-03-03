@@ -29,20 +29,31 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 /**
  * Basic lock implementation using a permit object to allow reentrancy. The lock will only be released when all
  * participants which previously acquired the lock have called {@linkplain #unlock}.
+ * The lock supports two mutually exclusive modes, shared and exclusive. If any shared locks are acquired and held
+ * then the exclusive lock may not be acquired, and if the exclusive lock is held, the shared locks may not be acquired.
+ * For an existing "permit holder" (operationId), the lock may be reentrantly re-acquired.
  *
  * @author Emanuel Muckenhuber
+ * @author Ken Wills
  */
 class ModelControllerLock {
     private final Sync sync = new Sync();
 
-    void lock(Integer permit) {
+    void lock(final Integer permit) {
         if (permit == null) {
             throw new IllegalArgumentException();
         }
         sync.acquire(permit);
     }
 
-    boolean lock(Integer permit, long timeout, TimeUnit unit) throws InterruptedException {
+    void lockShared(final Integer permit) {
+        if (permit == null) {
+            throw new IllegalArgumentException();
+        }
+        sync.acquireShared(permit);
+    }
+
+    boolean lock(final Integer permit, final long timeout, final TimeUnit unit) {
         boolean result = false;
         try {
             result = lockInterruptibly(permit, timeout, unit);
@@ -52,28 +63,59 @@ class ModelControllerLock {
         return result;
     }
 
-    void lockInterruptibly(Integer permit) throws InterruptedException {
+    boolean lockShared(final Integer permit, final long timeout, final TimeUnit unit) {
+        boolean result = false;
+        try {
+            result = lockSharedInterruptibly(permit, timeout, unit);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return result;
+    }
+
+    void lockInterruptibly(final Integer permit) throws InterruptedException {
         if (permit == null) {
             throw new IllegalArgumentException();
         }
         sync.acquireInterruptibly(permit);
     }
 
-    boolean lockInterruptibly(Integer permit, long timeout, TimeUnit unit) throws InterruptedException {
+    void lockSharedInterruptibly(final Integer permit) throws InterruptedException {
+        if (permit == null) {
+            throw new IllegalArgumentException();
+        }
+        sync.acquireSharedInterruptibly(permit);
+    }
+
+    boolean lockInterruptibly(final Integer permit, final long timeout, final TimeUnit unit) throws InterruptedException {
         if (permit == null) {
             throw new IllegalArgumentException();
         }
         return sync.tryAcquireNanos(permit, unit.toNanos(timeout));
     }
 
-    void unlock(Integer permit) {
+    boolean lockSharedInterruptibly(final Integer permit, final long timeout, final TimeUnit unit) throws InterruptedException {
+        if (permit == null) {
+            throw new IllegalArgumentException();
+        }
+        return sync.tryAcquireSharedNanos(permit, unit.toNanos(timeout));
+    }
+
+    void unlock(final Integer permit) {
         if (permit == null) {
             throw new IllegalArgumentException();
         }
         sync.release(permit);
     }
 
-    boolean detectDeadlockAndGetLock(int permit) {
+    void unlockShared(final Integer permit) {
+        if (permit == null) {
+            throw new IllegalArgumentException();
+        }
+        sync.releaseShared(permit);
+    }
+
+    boolean detectDeadlockAndGetLock(final int permit) {
         return sync.tryAcquire(permit);
     }
 
@@ -102,7 +144,27 @@ class ModelControllerLock {
         }
 
         @Override
-        protected synchronized boolean tryRelease(int permit) {
+        protected synchronized int tryAcquireShared(final int permit) {
+            if (permitHolder.get() != null) {
+                return -1;
+            }
+            if (compareAndSetState(0, 1)) {
+                return 1;
+            } else {
+                for (;;) {
+                    int current = getState();
+                    int next = current + 1; // increase by one
+                    if (next < 0) // overflow
+                        throw new Error("Maximum lock count exceeded");
+                    if (compareAndSetState(current, next)) {
+                        return 1;
+                    }
+                }
+            }
+        }
+
+        @Override
+        protected synchronized boolean tryRelease(final int permit) {
             final Object value = permitHolder.get();
             if (value == null) {
                 throw new IllegalStateException();
@@ -125,5 +187,23 @@ class ModelControllerLock {
             }
             return false;
         }
+
+        @Override
+        protected synchronized boolean tryReleaseShared(final int permit) {
+            if (permitHolder.get() != null) {
+                return false;
+            } else {
+                for (;;) {
+                    int current = getState();
+                    int next = current - 1; // count down one
+                    if(next < 0)
+                        throw new IllegalStateException();
+                    if (compareAndSetState(current, next)) {
+                        return (next == 0);
+                    }
+                }
+            }
+        }
+
     }
 }
