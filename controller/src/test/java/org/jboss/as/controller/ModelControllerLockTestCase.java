@@ -4,6 +4,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
+
 import org.junit.Test;
 
 /**
@@ -58,7 +59,7 @@ public class ModelControllerLockTestCase {
     @Test(expected = IllegalStateException.class)
     public void testTooManyExclusiveUnlocks() throws IllegalStateException {
         ModelControllerLock lock = new ModelControllerLock();
-        for (int i = 0; i < DEFAULT_TIMEOUT; i++) {
+        for (int i = 0; i < 5; i++) {
             lock.lock(OP1);
         }
 
@@ -76,7 +77,7 @@ public class ModelControllerLockTestCase {
     @Test(expected = IllegalStateException.class)
     public void testTooManyUnlocksShared() throws IllegalStateException {
         ModelControllerLock lock = new ModelControllerLock();
-        for (int i = 0; i < DEFAULT_TIMEOUT; i++) {
+        for (int i = 0; i < 5; i++) {
             lock.lockShared(OP1);
         }
 
@@ -147,6 +148,68 @@ public class ModelControllerLockTestCase {
         assertTrue(lock.lockInterruptibly(OP2, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
         assertFalse(lock.lockInterruptibly(OP1, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
         assertTrue(lock.lockInterruptibly(OP2, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+    }
+
+    @Test
+    public void testExclusiveAllowsPermit0() throws InterruptedException {
+        ModelControllerLock lock = new ModelControllerLock();
+        lock.lock(0);
+        assertFalse(lock.lockSharedInterruptibly(0, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertTrue(lock.lockInterruptibly(0, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertFalse(lock.lockSharedInterruptibly(0, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+    }
+
+    @Test
+    public void testSharedAllowsPermit0() throws InterruptedException {
+        ModelControllerLock lock = new ModelControllerLock();
+        lock.lockShared(0);
+        assertFalse(lock.lockInterruptibly(0, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertTrue(lock.lockSharedInterruptibly(0, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertFalse(lock.lockInterruptibly(0, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+    }
+
+    @Test
+    public void testExclusiveAllowsMinMaxInt() throws InterruptedException {
+        ModelControllerLock lock = new ModelControllerLock();
+        lock.lock(Integer.MAX_VALUE);
+        assertFalse(lock.lockSharedInterruptibly(Integer.MAX_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertTrue(lock.lockInterruptibly(Integer.MAX_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertFalse(lock.lockSharedInterruptibly(Integer.MAX_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        lock.unlock(Integer.MAX_VALUE);
+        lock.unlock(Integer.MAX_VALUE);
+        assertTrue(lock.lockSharedInterruptibly(Integer.MAX_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        lock.unlockShared(Integer.MAX_VALUE);
+
+        lock.lock(Integer.MIN_VALUE);
+        assertFalse(lock.lockSharedInterruptibly(Integer.MIN_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertTrue(lock.lockInterruptibly(Integer.MIN_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertFalse(lock.lockSharedInterruptibly(Integer.MIN_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        lock.unlock(Integer.MIN_VALUE);
+        lock.unlock(Integer.MIN_VALUE);
+        assertTrue(lock.lockSharedInterruptibly(Integer.MIN_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        lock.unlockShared(Integer.MIN_VALUE);
+    }
+
+    @Test
+    public void testSharedAllowsMinMaxInt() throws InterruptedException {
+        ModelControllerLock lock = new ModelControllerLock();
+        lock.lockShared(Integer.MAX_VALUE);
+        assertFalse(lock.lockInterruptibly(Integer.MAX_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertTrue(lock.lockSharedInterruptibly(Integer.MAX_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertFalse(lock.lockInterruptibly(Integer.MAX_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        lock.unlockShared(Integer.MAX_VALUE);
+        lock.unlockShared(Integer.MAX_VALUE);
+        assertTrue(lock.lockInterruptibly(Integer.MAX_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        lock.unlock(Integer.MAX_VALUE);
+
+        lock.lockShared(Integer.MIN_VALUE);
+        assertFalse(lock.lockInterruptibly(Integer.MIN_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertTrue(lock.lockSharedInterruptibly(Integer.MIN_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        assertFalse(lock.lockInterruptibly(Integer.MIN_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        lock.unlockShared(Integer.MIN_VALUE);
+        lock.unlockShared(Integer.MIN_VALUE);
+        assertTrue(lock.lockInterruptibly(Integer.MIN_VALUE, DEFAULT_TIMEOUT, DEFAULT_TIMEUNIT));
+        lock.unlock(Integer.MIN_VALUE);
     }
 
     @Test
