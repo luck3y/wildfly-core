@@ -38,6 +38,7 @@ public class HostSpecifiedInterfaceAddHandler extends SpecifiedInterfaceAddHandl
 
     @Override
     protected boolean requiresRuntime(OperationContext context) {
-        return context.getProcessType() == ProcessType.HOST_CONTROLLER;
+        ProcessType processType = context.getProcessType();
+        return processType == ProcessType.HOST_CONTROLLER || processType == ProcessType.EMBEDDED_HOST_CONTROLLER;
     }
 }

@@ -1216,7 +1216,7 @@ abstract class AbstractOperationContext implements OperationContext {
     public boolean isDefaultRequiresRuntime() {
         if (getProcessType().isServer()) {
             return isNormalServer();
-        } else if (getProcessType() == ProcessType.HOST_CONTROLLER) {
+        } else if (getProcessType() == ProcessType.HOST_CONTROLLER || getProcessType() == ProcessType.EMBEDDED_HOST_CONTROLLER) {
             return isHostCapableAddress();
         }
         return false;

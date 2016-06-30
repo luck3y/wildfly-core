@@ -65,7 +65,8 @@ public class DeploymentScannerExtension implements Extension {
     public void initialize(ExtensionContext context) {
         ROOT_LOGGER.debug("Initializing Deployment Scanner Extension");
 
-        if (context.getProcessType() == ProcessType.HOST_CONTROLLER) {
+        ProcessType processType = context.getProcessType();
+        if (processType == ProcessType.HOST_CONTROLLER || processType == ProcessType.EMBEDDED_HOST_CONTROLLER) {
             throw DeploymentScannerLogger.ROOT_LOGGER.deploymentScannerNotForDomainMode();
         }
 

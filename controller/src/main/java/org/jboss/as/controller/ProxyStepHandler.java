@@ -257,7 +257,8 @@ public class ProxyStepHandler implements OperationStepHandler {
                             } else {
                                 context.getResult().set(finalResult);
                             }
-                            if (context.getProcessType() == ProcessType.HOST_CONTROLLER && responseNode.has(SERVER_GROUPS)) {
+                            ProcessType processType = context.getProcessType();
+                            if ((processType == ProcessType.HOST_CONTROLLER || processType == ProcessType.EMBEDDED_HOST_CONTROLLER) && responseNode.has(SERVER_GROUPS)) {
                                 context.getServerResults().set(responseNode.get(SERVER_GROUPS));
                             }
                             if (responseNode.hasDefined(RESPONSE_HEADERS)) {
