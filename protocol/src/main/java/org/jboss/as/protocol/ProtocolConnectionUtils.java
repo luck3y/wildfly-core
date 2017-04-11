@@ -41,6 +41,7 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import org.jboss.as.protocol.logging.ProtocolLogger;
 import org.jboss.remoting3.Connection;
 import org.jboss.remoting3.Endpoint;
+import org.jboss.remoting3.RemotingOptions;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
 import org.wildfly.security.auth.client.AuthenticationContext;
 import org.wildfly.security.auth.client.AuthenticationContextConfigurationClient;
@@ -163,10 +164,14 @@ public class ProtocolConnectionUtils {
         for (Option option : optionMap) {
             builder.set(option, optionMap.get(option));
         }
+        if (optionMap.get(Options.SECURE) == null)
+            builder.set(Options.SECURE, configuration.isSecure());
         if (optionMap.get(Options.SSL_ENABLED) == null)
             builder.set(Options.SSL_ENABLED, configuration.isSslEnabled());
         if (optionMap.get(Options.SSL_STARTTLS) == null)
             builder.set(Options.SSL_STARTTLS, configuration.isUseStartTLS());
+        if (optionMap.get(RemotingOptions.SASL_PROTOCOL) == null)
+            builder.set(RemotingOptions.SASL_PROTOCOL, configuration.getUri().getScheme());
 
         AuthenticationContext authenticationContext = AuthenticationContext.empty();
         authenticationContext = authenticationContext.with(MatchRule.ALL, mergedConfiguration);

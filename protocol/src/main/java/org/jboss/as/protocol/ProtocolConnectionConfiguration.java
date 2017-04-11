@@ -52,6 +52,7 @@ public class ProtocolConnectionConfiguration {
     private ProtocolTimeoutHandler timeoutHandler;
     private boolean sslEnabled = true;
     private boolean useStartTLS = true;
+    private boolean secure = false;
 
     protected ProtocolConnectionConfiguration() {
         // TODO AS7-6223 propagate clientBindAddress configuration up to end user level and get rid of this system property
@@ -83,13 +84,30 @@ public class ProtocolConnectionConfiguration {
             switch(uri.getScheme()) {
                 case "http-remoting":
                 case "remote+http":
+                    this.secure = false;
                     this.sslEnabled = false;
                     this.useStartTLS = false;
                     break;
                 case "https-remoting":
                 case "remote+https":
+                    this.secure = true;
                     this.sslEnabled = true;
                     this.useStartTLS = false;
+                    break;
+                case "remote":
+                    this.secure = false;
+                    this.sslEnabled = true;
+                    this.useStartTLS = true;
+                    break;
+                case "remote+tls":
+                    this.secure = true;
+                    this.sslEnabled = true;
+                    this.useStartTLS = true;
+                    break;
+                case "remoting":
+                    this.secure = false;
+                    this.sslEnabled = true;
+                    this.useStartTLS = true;
                     break;
             }
         }
@@ -169,6 +187,10 @@ public class ProtocolConnectionConfiguration {
         return useStartTLS;
     }
 
+    public boolean isSecure() {
+        return secure;
+    }
+
     public ProtocolConnectionConfiguration copy() {
         return copy(this);
     }
@@ -206,6 +228,7 @@ public class ProtocolConnectionConfiguration {
         target.timeoutHandler = old.timeoutHandler;
         target.sslEnabled = old.sslEnabled;
         target.useStartTLS = old.useStartTLS;
+        target.secure = old.secure;
         return target;
     }
 
