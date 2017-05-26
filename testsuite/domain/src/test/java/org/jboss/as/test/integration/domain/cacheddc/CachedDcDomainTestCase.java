@@ -47,7 +47,9 @@ import org.jboss.logging.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.wildfly.test.util.RepeatRule;
 
 /**
  * Testing <code>--cached-dc</code> configuration option.<br>
@@ -57,6 +59,9 @@ import org.junit.Test;
  * @author <a href="ochaloup@redhat.com">Ondra Chaloupka</a>
  */
 public class CachedDcDomainTestCase {
+
+    @Rule
+    public RepeatRule rule = new RepeatRule(10);
 
     private static Logger log = Logger.getLogger(CachedDcDomainTestCase.class);
 
