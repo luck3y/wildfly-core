@@ -25,6 +25,7 @@ import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.PRO
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SERVER;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SUBSYSTEM;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,6 +34,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
 import org.jboss.as.controller.client.helpers.Operations;
 import org.jboss.as.controller.client.helpers.domain.DomainClient;
 import org.jboss.as.controller.client.helpers.domain.impl.DomainClientImpl;
@@ -55,6 +57,7 @@ import org.junit.Test;
  * @author <a href="ochaloup@redhat.com">Ondra Chaloupka</a>
  */
 public class CachedDcDomainTestCase {
+
     private static Logger log = Logger.getLogger(CachedDcDomainTestCase.class);
 
     private static final long TIMEOUT_S = TimeoutUtil.adjust(30);
@@ -195,6 +198,7 @@ public class CachedDcDomainTestCase {
         domainConfig.getSlaveConfiguration().setCachedDC(true);
         domainManager = DomainTestSupport.create(domainConfig);
         domainManager.start();
+
         stopSlaveAndWaitForUnregistration();
 
         assertEquals(false, domainManager.getDomainSlaveLifecycleUtil().isHostControllerStarted());
@@ -330,8 +334,8 @@ public class CachedDcDomainTestCase {
         DomainLifecycleUtil masterHost = domainManager.getDomainMasterLifecycleUtil();
         DomainLifecycleUtil slaveHost = domainManager.getDomainSlaveLifecycleUtil();
 
-        Assert.assertTrue("Master should be started", masterHost.areServersStarted());
-        Assert.assertTrue("Slave should be started", slaveHost.areServersStarted());
+        assertTrue("Master should be started", masterHost.areServersStarted());
+        assertTrue("Slave should be started", slaveHost.areServersStarted());
 
         domainManager.stop();
 
@@ -433,10 +437,10 @@ public class CachedDcDomainTestCase {
 
     private void checkHostControllerLogFile(WildFlyManagedConfiguration appConfiguration, String containString) {
         final File logFile = new File(appConfiguration.getDomainDirectory(), "log" + File.separator + "host-controller.log");
-        Assert.assertTrue("Log file '" + logFile + "' does not exist", logFile.exists());
+        assertTrue("Log file '" + logFile + "' does not exist", logFile.exists());
         try {
             final String content = com.google.common.io.Files.toString(logFile, Charset.forName("UTF-8"));
-            Assert.assertTrue("Expecting log file '" + logFile + " contains string '" + containString + "'",
+            assertTrue("Expecting log file '" + logFile + " contains string '" + containString + "'",
                 content.contains(containString));
         } catch (IOException ioe) {
             throw new RuntimeException("Can't read content of file " + logFile, ioe);
@@ -523,15 +527,15 @@ public class CachedDcDomainTestCase {
         assertEquals(SUCCESS, result.get(OUTCOME).asString());
     }
 
-    private void stopSlaveAndWaitForUnregistration() throws InterruptedException  {
+    private void stopSlaveAndWaitForUnregistration() throws InterruptedException, IOException  {
         domainManager.getDomainSlaveLifecycleUtil().stop();
         // WFCORE-2836
-        // this is a bit flaky in CI. It seems that the logger add below begins
-        // occasionally before the slave host unregisters completely, then when the
-        // slave unregisters the op is rolled back.
+        // this is a bit flaky in CI. It seems that that operation (example adding a logger)
+        // occasionally executre before the slave host unregisters completely, triggering rollback
+        // when the slave shuts down.
         final long deadline = System.currentTimeMillis() + 1000;
         while (true) {
-            if (!domainManager.getDomainSlaveLifecycleUtil().isHostControllerStarted()) {
+            if (!domainManager.getDomainMasterLifecycleUtil().isHostPresentInModel(domainManager.getDomainSlaveConfiguration().getHostName(), null)) {
                 break;
             }
             if (System.currentTimeMillis() > deadline) {

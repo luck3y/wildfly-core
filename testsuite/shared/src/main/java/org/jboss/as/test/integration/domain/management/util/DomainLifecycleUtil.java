@@ -69,6 +69,18 @@ import org.wildfly.security.auth.client.AuthenticationContext;
 import org.wildfly.security.auth.client.ElytronXmlParser;
 import org.wildfly.security.sasl.util.UsernamePasswordHashUtil;
 
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.FAILED;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.FAILURE_DESCRIPTION;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.HOST;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.HOST_STATE;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.NAME;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP_ADDR;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OUTCOME;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.READ_ATTRIBUTE_OPERATION;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.RESULT;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SUCCESS;
+
 /**
  * Utility for controlling the lifecycle of a domain.
  *
@@ -573,6 +585,36 @@ public class DomainLifecycleUtil {
             //
         }
         return false;
+    }
+
+    /**
+     * @param hostname the hostname to query
+     * @param requiredState the {@link ControlledProcessState.State} expected, or null for any state}
+     * @return true if the host is present in the queried hosts's model (in the requiredState, if present), false otherwise.
+     */
+    public boolean isHostPresentInModel(final String hostname, final ControlledProcessState.State requiredState) throws IOException {
+        final ModelNode operation = new ModelNode();
+        operation.get(OP).set(READ_ATTRIBUTE_OPERATION);
+        operation.get(OP_ADDR).add(HOST, hostname);
+        operation.get(NAME).set(HOST_STATE);
+
+        ModelNode result;
+        result = domainClient.execute(operation);
+
+        if (result.get(OUTCOME).asString().equals(SUCCESS)) {
+            final ModelNode model = result.require(RESULT);
+            if (requiredState == null) {
+                return true;
+            }
+            return model.asString().equalsIgnoreCase(requiredState.toString());
+        } else if (result.get(OUTCOME).asString().equals(FAILED)) {
+            // make sure we get WFLYCTL0030: No resource definition is registered for address so we don't mistakenly hide other problems.
+            if (result.require(FAILURE_DESCRIPTION).asString().contains("WFLYCTL0030")) {
+                return false;
+            }
+        }
+        // otherwise, something bad happened
+        throw new RuntimeException(result != null ? result.toJSONString(false) : "Unknown error in determining host state.");
     }
 
     private synchronized void closeConnection() {
