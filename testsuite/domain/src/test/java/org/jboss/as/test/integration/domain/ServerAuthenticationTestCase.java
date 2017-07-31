@@ -52,7 +52,6 @@ import org.jboss.as.test.integration.domain.management.util.DomainTestSupport;
 import org.jboss.dmr.ModelNode;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.wildfly.security.sasl.util.UsernamePasswordHashUtil;
 
@@ -61,7 +60,6 @@ import org.wildfly.security.sasl.util.UsernamePasswordHashUtil;
  *
  * Basic tests for domain server auth when local realm authentication is removed.
  */
-@Ignore("WFCORE-3125")
 public class ServerAuthenticationTestCase {
 
     private static DomainTestSupport testSupport;
