@@ -22,6 +22,7 @@
 
 package org.jboss.as.controller.operations.global;
 
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.HOST_STATE;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.NAME;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.READ_ATTRIBUTE_OPERATION;
@@ -146,6 +147,9 @@ public class ReadAttributeHandler extends GlobalOperationHandlers.AbstractMultiT
     }
 
     private void doExecuteInternal(OperationContext context, ModelNode operation) throws OperationFailedException {
+        if (operation.has(NAME) && context.isBooting() && operation.get(NAME).toString().equalsIgnoreCase(HOST_STATE)) {
+            return;
+        }
         validator.validate(operation);
         String attributeName = GlobalOperationAttributes.NAME.resolveModelAttribute(context, operation).asString();
         final boolean defaults = GlobalOperationAttributes.INCLUDE_DEFAULTS.resolveModelAttribute(context,operation).asBoolean();
