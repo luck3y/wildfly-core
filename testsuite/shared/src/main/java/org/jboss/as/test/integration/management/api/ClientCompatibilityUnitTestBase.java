@@ -37,6 +37,7 @@ import org.jboss.as.model.test.ChildFirstClassLoaderBuilder;
 import org.jboss.as.process.protocol.StreamUtils;
 import org.jboss.as.test.integration.management.ManagementOperations;
 import org.jboss.as.test.integration.management.util.ServerReload;
+import org.jboss.as.test.shared.TestSuiteEnvironment;
 import org.jboss.dmr.ModelNode;
 import org.jboss.shrinkwrap.api.Archive;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -111,7 +112,7 @@ public abstract class ClientCompatibilityUnitTestBase {
         }
     }
 
-    protected static final String CONTROLLER_ADDRESS = System.getProperty("node0", "localhost");
+    protected static final String CONTROLLER_ADDRESS = System.getProperty("node0", TestSuiteEnvironment.getServerAddress());
 
     protected static final String WF_CLIENT = "org.wildfly:wildfly-controller-client";
     protected static final String WFCORE_CLIENT = "org.wildfly.core:wildfly-controller-client";
