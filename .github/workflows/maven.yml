@@ -25,14 +25,13 @@ jobs:
         restore-keys: |
             m2-
     - uses: actions/checkout@v2
-    - name: Collect modules with tests
-      run: grep -r @Test | grep -v .github | awk -F\/ '{print $1}' | sort | uniq | tr '\n' ',\ '
-    - name: Set up JDK 8
-      uses: joschi/setup-jdk@v2
+    - name: Set up JDK8
+      uses: AdoptOpenJDK/install-jdk@v1
       with:
-        java-version: 8
+        version: 8
+        impl: hotspot
     - name: Build
-      run: mvn -U -B -fae -DskipTests -Dcheckstyle.skip=false -Denforcer.skip=false clean install
+      run: mvn -U -B -fae -DskipTests clean install
     - name: Tar Maven Repo
       shell: bash
       run: tar -czf maven-repo.tgz -C ~ .m2/repository
@@ -45,7 +44,7 @@ jobs:
       if: failure()
       with:
         name: surefire-reports-build
-        path: '**/surefire-reports/*.txt'
+        path: '**/surefire-reports/*'
   test-matrix:
     name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -53,23 +52,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-20.04, windows-latest]
         # TODO automate this from var above
-        module: [bootable-jar,cli,controller,controller-client,core-model-test,deployment-repository,deployment-scanner,
-                  discovery,domain-http,domain-management,elytron,embedded,event-logger,host-controller,io,jmx,launcher,
-                  logging,model-test,network,patching,platform-mbean,process-controller,protocol,remoting,request-controller,
-                  security-manager,server,subsystem-test,threads]
+        module: ['', 'ts.domain', 'ts.rbac', 'ts.layers', 'ts.bootable', 'ipv6', 'security.manager', 'ts.patching', 'ts.manualmode']
         jdk: [8, 11]
     steps:
     - name: Update hosts - linux
-      if: matrix.os == 'ubuntu-latest'
+      if: contains(matrix.os, 'ubuntu')
       run: |
         cat /etc/hosts
         sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
         sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
-        sudo sysctl -w fs.file-max=2097152
     - name: Update hosts - windows
-      if: matrix.os == 'windows-latest'
+      if: contains(matrix.os, 'windows')
       run: |
         type %SystemRoot%\System32\drivers\etc\hosts
         echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > %SystemRoot%\System32\drivers\etc\hosts
@@ -90,64 +85,13 @@ jobs:
     - name: Extract Maven Repo
       shell: bash
       run: tar -xzf maven-repo.tgz -C ~
-    - name: Set up JDK ${{ matrix.java }}
-      uses: joschi/setup-jdk@v2
+    - name: Set up JDK ${{ matrix.jdk }}
+      uses: AdoptOpenJDK/install-jdk@v1
       with:
-        java-version: ${{ matrix.jdk }}
+        version: 8
+        impl: hotspot
     - name: Run Tests
-      run: mvn -U -B -fae test '-DallTests' '-Dcheckstyle.skip=true' '-Denforcer.skip=true' -pl ${{ matrix.module }}
-    - uses: actions/upload-artifact@v2
-      if: failure()
-      with:
-        name: surefire-reports-${{ matrix.jdk }}-${{ matrix.module }}-${{ matrix.os }}
-        path: '**/surefire-reports/*.txt'
-
-  testsuite-matrix:
-    name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    needs: test-matrix
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        module: [ ts.rbac, ts.layers, ts.bootable, ipv6, security.manager, ts.patching, ts.manualmode ]
-        jdk: [8, 11]
-    steps:
-    - name: Update hosts - linux
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        cat /etc/hosts
-        sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
-        sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
-        sudo sysctl -w fs.file-max=2097152
-    - name: Update hosts - windows
-      if: matrix.os == 'windows-latest'
-      run: |
-        type %SystemRoot%\System32\drivers\etc\hosts
-        echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > %SystemRoot%\System32\drivers\etc\hosts
-        echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> %SystemRoot%\System32\drivers\etc\hosts
-      shell: cmd
-    - uses: n1hility/cancel-previous-runs@v2
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Host information
-      run: |
-       hostname || true
-    - uses: actions/checkout@v2
-    - name: Download Maven Repo
-      uses: actions/download-artifact@v1
-      with:
-        name: maven-repo
-        path: .
-    - name: Extract Maven Repo
-      shell: bash
-      run: tar -xzf maven-repo.tgz -C ~
-    - name: Set up JDK ${{ matrix.java }}
-      uses: joschi/setup-jdk@v2
-      with:
-        java-version: ${{ matrix.jdk }}
-    - name: Run Tests
-      run: mvn -U -B -fae test '-DallTests' '-Dcheckstyle.skip=true' '-Denforcer.skip=true' -D${{ matrix.module }}
+      run: mvn -U -B -fae test '-DallTests' '-Dcheckstyle.skip=true' '-Denforcer.skip=true' --define=${{ matrix.module }}
     - uses: actions/upload-artifact@v2
       if: failure()
       with:
